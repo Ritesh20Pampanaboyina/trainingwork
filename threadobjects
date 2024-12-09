@@ -1,0 +1,24 @@
+#region VPHP_PaySpan835_ControlReport.Entities
+namespace VPHP_PaySpan835_ControlReport.Entities
+{
+    #region Referenced Assemblies
+
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+    using System.Data;
+
+    #endregion
+
+    #region ThreadObject
+    public struct ThreadObject
+    {
+        public QPaySpan835ControlReportProcessDetails objPaySpan835ProcessDetails;
+        public AutoResetEvent arEvent;
+        public DataRow drauth;
+    }
+    #endregion
+}
+#endregion
