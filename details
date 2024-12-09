@@ -1,0 +1,67 @@
+#region VPHP_PaySpan835_ControlReport.Entities
+namespace VPHP_PaySpan835_ControlReport.Entities
+{
+    #region Referenced Assemblies
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    #endregion
+
+    #region QPaySpan835ProcessDetails
+    public class QPaySpan835ControlReportProcessDetails
+    {
+        //Sql Server Name
+        public string strServerName { get; set; }
+        //Custom database Name
+        public string strCustomDbName { get; set; }
+        ////Plan Integration Database Name
+        //public string strPlanIntegration { get; set; }
+        ////QCSIDB Database Name
+        //public string strQCSIDBName { get; set; }
+
+        ////Processlogging details
+        //public string strProcessLogID { get; set; }
+        //public string strProcessStepID { get; set; }
+        //public string strEnvid { get; set; }
+
+        ////Path of the package in the file location
+        //public string strPackagePath { get; set; }
+
+        ////File path of the Vital files
+        //public string strauthaFilePath { get; set; }
+
+        public string strOutputPath { get; set; }
+
+        public string strInputPath { get; set; }
+
+      //  public string strArchivePath { get; set; }
+
+        public string strFileName { get; set; }
+
+        public string str835FileName { get; set; }
+
+        public string str835SuppFileName { get; set; }
+
+        public string strlob { get; set; } 
+        
+        #region Constructor QAuthreferralProcessDetails
+
+        public QPaySpan835ControlReportProcessDetails()
+        {
+            //strArchivePath = string.Empty;
+            strOutputPath = string.Empty;
+            strInputPath = string.Empty;
+            strFileName = string.Empty;
+            str835FileName = string.Empty;
+            str835SuppFileName = string.Empty;
+            strServerName = string.Empty;
+            strCustomDbName = string.Empty;
+            strlob = string.Empty;
+        }
+
+        #endregion
+    }
+    #endregion
+}
+#endregion
