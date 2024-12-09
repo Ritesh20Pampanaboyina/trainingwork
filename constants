@@ -1,0 +1,21 @@
+#region VPHP_PaySpan835_ControlReport.Entities
+namespace VPHP_PaySpan835_ControlReport.Entities
+{
+    #region Referenced Assemblies
+
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+
+    #endregion
+
+    #region Constants
+    public static class Constants
+    {
+        public const string cEntity = "PaySpan835ControlReport ";
+        public const string sVPHPp_PaySpan835_GetControlReportData = "VPHPp_Ext_PaySpan835_GenerateControlReport";        
+    }
+    #endregion
+}
+#endregion
