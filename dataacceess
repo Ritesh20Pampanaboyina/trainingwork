@@ -1,0 +1,280 @@
+#region VPHP_PaySpan835_ControlReport.DataAccessLayer
+namespace VPHP_PaySpan835_ControlReport.DataAccess
+{
+    #region Referenced Assemblies
+
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Data;
+    using System.Data.SqlClient;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Xml;
+    using System.Xml.Linq;
+    using System.Text.RegularExpressions;
+    using VPHP_PaySpan835_ControlReport.Common;
+    using VPHP_PaySpan835_ControlReport.Entities;
+    //using Microsoft.Office.Interop.Excel;
+
+
+    #endregion
+
+    #region PaySpan835ControlReportDataLayer class
+    class ControlReportlDataLayer
+    {
+         #region Get Control Report Data
+        /// <summary>
+        /// Retrieves the inpatient records from the custom table
+        /// </summary>
+        /// <param name="objPaySpan835ProcessDetails">Object containing processdetails</param>
+        /// <returns>Table contining the records</returns>
+        public static void GetReportData(QPaySpan835ControlReportProcessDetails objPaySpan835ProcessDetails)
+        {
+            #region Declaration
+            System.Data.DataTable dtReportData = new System.Data.DataTable();
+            dtReportData.Columns.Add("ProviderID", typeof(string));
+            dtReportData.Columns.Add("Check#", typeof(string));
+            dtReportData.Columns.Add("Amount", typeof(string));
+            string orig835FName = string.Empty;
+            string orig835SuppFName = string.Empty;
+            string suppName = string.Empty;
+            string fName = string.Empty;
+            string ctrlName = string.Empty;
+            string sDate = string.Empty;
+            int counter = 0;
+            #endregion
+            try
+            {
+                //Get the Supplemental and 835 filename
+                string[] allFiles = Directory.GetFiles(objPaySpan835ProcessDetails.strInputPath);
+                //CAPS-10450 - Start - If the Lob is SENTARA then Prefix Filename is Changed from "VPHP_" or "OHP_"
+                string str835SuppPrefFileName = "VPHP_835SUPP_5010_";
+                string str835PrefFileName = "VPHP_835_5010_";
+                if (objPaySpan835ProcessDetails.strlob.Contains("SENTARA"))
+                {
+                    str835SuppPrefFileName = "OHP_835SUPP_5010_";
+                    str835PrefFileName = "OHP_835_5010_";
+                }
+                //CAPS-10450 - End - If the Lob is SENTARA then Prefix Filename is Changed from "VPHP_" or "OHP_"
+
+                bool fileFound = false;
+
+                for (int i = 0; i < allFiles.Length; i++)
+                {
+                   //CAPS-10450 - Using the variable name instead of hardcoded filename based on the lob
+                    if ((allFiles[i].ToString().Contains(str835SuppPrefFileName) && (allFiles[i].ToString().Contains(objPaySpan835ProcessDetails.strlob))) ||
+                            (allFiles[i].ToString().Contains(str835PrefFileName) && (allFiles[i].ToString().Contains(objPaySpan835ProcessDetails.strlob))) )
+                            
+                        fileFound = true;
+                }
+
+                if (fileFound)
+                {
+                    for (int i = 0; i < allFiles.Length; i++)
+                    {
+                        //CAPS-10450 - Using the variable name instead of hardcoded filename based on the lob
+                        if (allFiles[i].ToString().Contains(str835SuppPrefFileName) && 
+                            allFiles[i].ToString().Contains(objPaySpan835ProcessDetails.strlob))
+                        {
+                            objPaySpan835ProcessDetails.str835SuppFileName = allFiles[i].ToString();
+                            orig835SuppFName = allFiles[i].ToString();
+                        }
+                        //CAPS-10450 - Using the variable name instead of hardcoded filename based on the lob
+                        else if (allFiles[i].ToString().Contains(str835PrefFileName) && 
+                            allFiles[i].ToString().Contains(objPaySpan835ProcessDetails.strlob))
+                        {
+                            objPaySpan835ProcessDetails.str835FileName = allFiles[i].ToString();
+
+                           
+
+                            string strFileName = string.Empty;
+                           
+                            string[] strFileSplit = objPaySpan835ProcessDetails.str835FileName.Split('_');
+                            int count = strFileSplit.Count();
+                            string sProgramID = strFileSplit[count - 2].ToString();
+                            sDate = strFileSplit[count - 1].ToString();
+                            string[] saDate = sDate.Split('.');
+                            if (saDate.Count() > 1)
+                            {
+                                sDate = saDate[0].ToString();
+                            }
+                            
+                                                       
+                            orig835FName = allFiles[i].ToString();
+                        }
+                    }
+
+                    if (objPaySpan835ProcessDetails.str835SuppFileName != string.Empty)
+                    {
+                        foreach (string line in File.ReadLines(objPaySpan835ProcessDetails.str835SuppFileName))
+                        {
+                            if (line.StartsWith("C*"))
+                                counter++;
+                        }
+                        suppName = objPaySpan835ProcessDetails.str835SuppFileName.Substring(objPaySpan835ProcessDetails.str835SuppFileName.LastIndexOf("\\") + 1);
+                        
+                        objPaySpan835ProcessDetails.str835SuppFileName = suppName + ";  Total # of Claims = " + counter;
+                        
+                    }
+
+                  
+                    if (objPaySpan835ProcessDetails.str835FileName != string.Empty)
+                    {
+
+                        foreach (string line in File.ReadLines(objPaySpan835ProcessDetails.str835FileName))
+                        {
+                            var matches = Regex.Matches(line, "~CLP*");
+                            counter = matches.Count;
+                        }
+
+                        var content = string.Empty;
+                        using (StreamReader reader = new StreamReader(objPaySpan835ProcessDetails.str835FileName))
+                        {
+                            content = reader.ReadToEnd();
+                            reader.Close();
+                        }
+
+                        content = Regex.Replace(content, "~", Environment.NewLine + "~");
+
+                        using (StreamWriter writer = new StreamWriter(objPaySpan835ProcessDetails.str835FileName))
+                        {
+                            writer.Write(content);
+                            writer.Close();
+                        }
+
+                        string check = string.Empty;
+                        string provid = string.Empty;
+                        string amount = "0";
+                        decimal total = 0;
+                        int checkcnt = 0;
+                        foreach (string line in File.ReadLines(objPaySpan835ProcessDetails.str835FileName))
+                        {
+                            
+                            int getprovid = 0;
+                            
+                            if (line.StartsWith("~BPR*"))
+                            {
+                                string s = line.Substring(7);
+                                
+                                amount = s.Substring(0, s.IndexOf("*"));
+                                total = total + Convert.ToDecimal(amount);
+                                Console.WriteLine("Amount = " + amount);
+                            }
+                            else if (line.StartsWith("~TRN*1*"))
+                            {
+                                string s = line.Substring(7);
+                                check = s.Substring(0, s.IndexOf("*"));
+                                checkcnt = checkcnt + 1;
+                                Console.WriteLine("Check# is " + check);
+                            }
+                            else if (line.StartsWith("~REF*PQ"))
+                            {
+                                provid = line.Substring(8);
+                                getprovid = 1;
+                                //MLTSS added so that first provider is not blank
+                                //Console.WriteLine(provid);
+                            }
+
+                            //MLTSS added so that first provider is not blank
+                            if ((check != string.Empty) && getprovid == 1)
+                            {
+                               
+                                DataRow newRow = dtReportData.NewRow();
+                                newRow["ProviderID"] = provid;
+                                newRow["Check#"] = check;
+                                newRow["Amount"] = amount;
+                                dtReportData.Rows.Add(newRow);
+                                check = string.Empty;
+                                provid = string.Empty;
+                                amount = string.Empty;
+                                getprovid = 0;
+                                //MLTSS added so that first provider is not blank
+                            }
+                        }
+                        fName = objPaySpan835ProcessDetails.str835FileName.Substring(objPaySpan835ProcessDetails.str835FileName.LastIndexOf("\\") + 1);
+                        Console.WriteLine(fName);
+
+                        objPaySpan835ProcessDetails.str835FileName = fName + ";  Total # of Claims = " + counter + "; " + checkcnt + " checks, $" + total;
+                        Console.WriteLine(objPaySpan835ProcessDetails.str835FileName);
+                    }
+
+                    
+
+                    WriteToCsvFile(dtReportData, sDate, objPaySpan835ProcessDetails);
+                }
+                else
+                {
+                    Common.WriteEventLogEntry("835 Control Report - PaySpan files are not available.",
+                                                       EventLogEntryType.Information);
+                }
+                
+               
+
+            }
+            catch (Exception e)
+            {
+                #region Logging Exception
+                Console.WriteLine("Source - " + e.Source +
+                                                            "\n Message - " +
+                                                            e.Message +
+                                                            "\n StackTrace - " +
+                                                            e.StackTrace,
+                                                            EventLogEntryType.Error);
+
+                Common.WriteEventLogEntry("Source - " + e.Source +
+                                                        "\n Message - " +
+                                                        e.Message +
+                                                        "\n StackTrace - " +
+                                                        e.StackTrace,
+                                                        EventLogEntryType.Error);
+                #endregion
+            }
+        }
+        #endregion
+
+
+
+        public static void WriteToCsvFile(System.Data.DataTable controlreportdata,string ctrlName, QPaySpan835ControlReportProcessDetails objPaySpan835ProcessDetails)
+        {
+            StringBuilder fileContent = new StringBuilder();
+            
+            string filePath = string.Concat(objPaySpan835ProcessDetails.strOutputPath + "\\", objPaySpan835ProcessDetails.strFileName +ctrlName+ ".csv");
+
+            fileContent.Append(objPaySpan835ProcessDetails.str835SuppFileName);
+            fileContent.Append("\n");
+            fileContent.Append(objPaySpan835ProcessDetails.str835FileName);
+            fileContent.Append("\n");
+            fileContent.Append("\n");
+            
+            fileContent.Append("\n");
+            foreach (var col in controlreportdata.Columns)
+            {
+                fileContent.Append(col.ToString() + ",");
+            }
+
+            fileContent.Replace(",", System.Environment.NewLine, fileContent.Length - 1, 1);
+
+
+
+            foreach (DataRow dr in controlreportdata.Rows)
+            {
+
+                foreach (var column in dr.ItemArray)
+                {
+                    fileContent.Append("\"" + column.ToString() + "\",");
+                }
+
+                fileContent.Replace(",", System.Environment.NewLine, fileContent.Length - 1, 1);
+            }
+
+            System.IO.File.WriteAllText(filePath, fileContent.ToString());
+            Console.WriteLine("PaySpan835 control report successfully created");
+        }
+      
+      
+    }
+    #endregion
+}
+#endregion
