@@ -1,0 +1,122 @@
+#region VPHP_PaySpan835_ControlReport.Common
+namespace VPHP_PaySpan835_ControlReport.Common
+{
+    #region Referenced Assemblies
+
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Diagnostics;
+
+    #endregion
+
+    #region Common
+    public class Common
+    {
+        #region Static Members
+        private static EventLog m_EventLogger;
+        #endregion
+
+        #region BuildConnectionString Method
+        /// <summary>
+        /// This method builds a SQL connection string from the server name and database name
+        /// passed as arguments.
+        /// </summary>
+        /// <param name="strServerName">Server Name</param>
+        /// <param name="strCustomDbName">Database Name</param>
+        /// <returns>Valid SQL Connection string</returns>
+        public static string BuildConnectionString(string sServerName, string sDatabaseName)
+        {
+            StringBuilder sbConnectionString = new StringBuilder();
+
+            //Building a SQL connection string using a StringBuild object via method chaining.
+            sbConnectionString.Append("Data Source = ").Append(
+                sServerName).Append(
+                "; Initial Catalog = ").Append(
+                sDatabaseName).Append(
+                "; Integrated Security = SSPI");
+            Console.WriteLine(sbConnectionString.ToString());
+            return sbConnectionString.ToString();
+        }
+        #endregion
+
+        #region WriteEventLogEntry Method
+        /// <summary>
+        /// Invoke this method to write a new entry to the Event Log.
+        /// </summary>
+        /// <param name="strEventLogMessage">Message that needs to be logged.</param>
+        /// <param name="eltEventLogType">Event Log type.</param>
+        public static void WriteEventLogEntry(string sEventLogMessage, EventLogEntryType eltEventLogType)
+        {
+            //Instantiating m_EventLogger with the LogName, MachineName and Source strings.
+            using (m_EventLogger = new EventLog("835 PaySpan Control Report",
+                                            Environment.MachineName,
+                                            "835 PaySpan"))
+            {
+                /*Proceed to log the messge to event viewer only if the configdata parameter for
+                 * LogEvent is set to True.*/
+
+                //Invoke WriteEntry method of EventLog object, to log the message along with its type.
+                m_EventLogger.WriteEntry(sEventLogMessage, eltEventLogType);
+
+            }
+        }
+        #endregion
+
+        #region LogException
+        /// <summary>
+        /// This function Logs the exception in the event viewer as well as the console
+        /// </summary>
+        /// <param name="strMessage"></param>
+        /// <param name="ex"></param>
+        public static void LogException(string strMessage, Exception ex)
+        {
+
+
+            //WriteEventLogEntry("Source - " + ex.Source +
+            //                                               "\n Message - " +
+            //                                               ex.Message +
+            //                                               "\n StackTrace - " +
+            //                                               ex.StackTrace,
+            //                                               EventLogEntryType.Error);
+
+            Console.WriteLine(strMessage +
+                                " Error Message " + ex.Message + " Stack - " + ex.StackTrace);
+
+        }
+        #endregion
+
+        #region FormatDate
+        /// <summary>
+        /// This function will format the date to format (YYYY-MM-DD)
+        /// </summary>
+        /// <param name="strDate"></param>
+        /// <returns></returns>
+        public static string FormatDate(string strDate)
+        {
+            #region Declaration
+            string strFormattedDate = string.Empty;
+            #endregion
+
+            try
+            {
+                if (strDate.Trim() == "" || strDate == null)
+                    strFormattedDate = string.Empty;
+                else
+                    strFormattedDate = strDate.Substring(0, 4) + "-" + strDate.Substring(4, 2) + "-" + strDate.Substring(6, 2);
+
+            }
+            catch (Exception ex)
+            {
+                LogException("Error in Formatting the date:", ex);
+            }
+
+            return strFormattedDate;
+
+        }
+        #endregion
+    }
+    #endregion
+}
+#endregion
