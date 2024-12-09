@@ -1,0 +1,122 @@
+#region VPHP_PaySpan835_ControlReport.Helper
+namespace VPHP_PaySpan835_ControlReport.Helper
+{
+    #region Declaration
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using Q.ProcessLogWrapper;
+    using System.Diagnostics;
+    using VPHP_PaySpan835_ControlReport.Common;
+    using VPHP_PaySpan835_ControlReport.Entities;
+    using VPHP_PaySpan835_ControlReport.DataAccess;
+    using Microsoft.SqlServer.Dts.Runtime;
+    using Q.Global;
+    using Q.Global.DomainManagement;
+    using System.IO;
+    #endregion
+
+    #region ControlReportHelper
+    public class ControlReportHelper
+    {
+        #region Declaration
+        cProcessLog qcsiProcessLog = new cProcessLog();
+        private IQcsiSession m_qcsisession;
+        public static Q.Global.DomainManagement.AppDomainManager appDomain;
+        static ControlReportHelper()
+        {
+            appDomain = new Q.Global.DomainManagement.AppDomainManager(false, MasterLocation.LOCALONLY);
+        }
+        //public Q.Global.DomainManagement.AppDomainManager appDomain = new Q.Global.DomainManagement.AppDomainManager(false, Q.Global.DomainManagement.MasterLocation.LOCALONLY);
+        string strqcsiProcessHeaderId = string.Empty;
+        #endregion
+
+        #region Initialize
+
+        /// <summary> 
+        /// This method is used to check whether the QNXT session is initialised or not.
+        /// </summary>
+        /// <param name="envID"></param>
+        /// <param name="strProcessHeaderId"></param>
+        /// <returns></returns>
+        public bool Initialize(string envID)
+        {
+            try
+            {
+                m_qcsisession = Globals.CreateSession();
+                //m_qcsisession.Login(string.Empty, string.Empty);                 
+                m_qcsisession.Login("", "");
+                //m_qcsisession.Login("Service", "");                
+                m_qcsisession.SelectEnv(envID, "plandata");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string message = string.Empty;
+                Console.WriteLine("Error in Initializing the QNXT session. Please check the EnvironmentId in the configuration file. The Error Message is: " + ex.Message);
+                //m_EventLog.WriteEntry("Error in Initializing the QNXT session. Please check the EnvironmentId in the configuration file. The Error Message is: " + ex.Message, EventLogEntryType.Error);
+                message = ex.Message;
+                Exception innerEx = ex.InnerException;
+                while (innerEx != null)
+                {
+                    message += Environment.NewLine + innerEx.Message;
+                    innerEx = innerEx.InnerException;
+                }
+                Console.WriteLine(message);
+                return false;
+            }
+        }
+        #endregion
+
+        #region Process Message
+        /// <summary>
+        /// Main function for processing the interface
+        /// </summary>
+        /// <param name="objControlReport">object containing the configuration parameters</param>
+        /// <returns>status of the process</returns>
+        public void ProcessMessage(QPaySpan835ControlReportProcessDetails objControlReport)
+        {
+            #region Declaration
+            string strMessage = string.Empty;
+            #endregion
+
+            try
+            {
+               
+                Console.WriteLine("PaySpan835 Control Report Process has started");
+               
+                ControlReportlDataLayer.GetReportData(objControlReport);
+
+                Console.WriteLine("PaySpan835 Control Report Process has completed");
+             }
+
+               
+            catch (Exception e)
+            {
+
+                #region Logging Exception
+                Console.WriteLine("Source - " + e.Source +
+                                                            "\n Message - " +
+                                                            e.Message +
+                                                            "\n StackTrace - " +
+                                                            e.StackTrace,
+                                                            EventLogEntryType.Error);
+
+                Common.WriteEventLogEntry("Source - " + e.Source +
+                                                         "\n Message - " +
+                                                         e.Message +
+                                                         "\n StackTrace - " +
+                                                         e.StackTrace,
+                                                         EventLogEntryType.Error);
+                #endregion
+
+            }
+        }
+        #endregion
+
+    }
+    #endregion
+}
+#endregion
